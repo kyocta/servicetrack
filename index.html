@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ServiceTrack — Sistem Pencatatan Servis & Tracking Multi-Stage</title>
+
+  <!-- 1. Google Fonts: Plus Jakarta Sans (Sesuai Penpot & DESIGN.md) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- 2. Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#3525cd',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 3. Supabase JS SDK v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen antialiased flex flex-col">
+
+  <!-- ============================================================== -->
+  <!-- DEMO CONFIGURATION BANNER (Muncul otomatis saat mode fallback) -->
+  <!-- ============================================================== -->
+  <div id="demo-mode-banner" class="hidden bg-amber-500 text-white text-xs py-2 px-4 shadow-sm z-50">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd"
+            d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+            clip-rule="evenodd" />
+        </svg>
+        <span><strong>Mode Demo Lokal Aktif (localStorage):</strong> Supabase URL masih placeholder. Seluruh navigasi,
+          alur multi-stage status, & pengujian Black Box berjalan lancar secara lokal. Untuk hubungkan ke Cloud, ganti
+          konstanta <code class="bg-amber-600 px-1 py-0.5 rounded text-[11px]">SUPABASE_URL</code> & <code
+            class="bg-amber-600 px-1 py-0.5 rounded text-[11px]">SUPABASE_ANON_KEY</code> di script.</span>
+      </div>
+      <button onclick="document.getElementById('demo-mode-banner').classList.add('hidden')"
+        class="text-amber-100 hover:text-white underline text-[11px] shrink-0">Tutup Notifikasi</button>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- APP SHELL: SIDEBAR (240px) + MAIN AREA (PERSIS DESAIN PENPOT)  -->
+  <!-- ============================================================== -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- ============================================================ -->
+    <!-- 1. ASIDE - LEFT SIDEBAR (Width: 240px, Bg: White)            -->
+    <!-- ============================================================ -->
+    <aside
+      class="w-60 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col justify-between hidden md:flex z-30 select-none">
+
+      <!-- Top Brand & Navigation -->
+      <div>
+        <!-- Brand Header -->
+        <div class="h-16 flex items-center gap-3 px-5 border-b border-slate-100">
+          <div
+            class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm font-bold text-base">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base font-bold text-slate-900 leading-tight">ServiceTrack</h1>
+            <p class="text-[10px] text-slate-400 font-medium">Sistem Servis Loket</p>
+          </div>
+        </div>
+
+        <!-- Navigation Menu Items (Sesuai Teks Penpot) -->
+        <nav class="p-3 space-y-1">
+          <!-- Menu 1: Beranda -->
+          <button type="button" onclick="switchView('beranda')" id="nav-btn-beranda"
+            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-50 text-indigo-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span>Beranda</span>
+          </button>
+
+          <!-- Menu 2: Tambah Servis -->
+          <button type="button" onclick="switchView('tambah')" id="nav-btn-tambah"
+            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Tambah Servis</span>
+          </button>
+
+          <!-- Menu 3: Daftar Servis -->
+          <button type="button" onclick="switchView('daftar')" id="nav-btn-daftar"
+            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            <span>Daftar Servis</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bottom Profile (Petugas Servis / Loket Servis - Sesuai Penpot) -->
+      <div class="p-3 border-t border-slate-100">
+        <div class="flex items-center gap-3 px-2 py-2 rounded-lg bg-slate-50 border border-slate-100">
+          <div
+            class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+            PS
+          </div>
+          <div class="overflow-hidden">
+            <p class="text-xs font-semibold text-slate-800 leading-tight truncate">Petugas Servis</p>
+            <p class="text-[10px] text-slate-400 truncate">Loket Servis</p>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ============================================================ -->
+    <!-- 2. MAIN LAYOUT WRAPPER (Top Header + Content Canvas)        -->
+    <!-- ============================================================ -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
+
+      <!-- Top Header (Breadcrumb & Connection Badge) -->
+      <header
+        class="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+        <!-- Breadcrumb Nav (Sesuai Penpot) -->
+        <nav class="flex items-center gap-2 text-xs" aria-label="Breadcrumb">
+          <span class="text-slate-400 font-medium hover:text-slate-600 cursor-pointer"
+            onclick="switchView('beranda')">ServiceTrack</span>
+          <span class="text-slate-300">/</span>
+          <span id="breadcrumb-current" class="text-slate-800 font-semibold">Beranda</span>
+        </nav>
+
+        <!-- Status Database & Mobile Nav Trigger -->
+        <div class="flex items-center gap-3">
+          <!-- Mobile Nav Toggle -->
+          <div class="flex md:hidden items-center gap-1">
+            <button onclick="switchView('beranda')"
+              class="p-1.5 rounded text-xs font-medium bg-slate-100 text-slate-700">Home</button>
+            <button onclick="switchView('tambah')"
+              class="p-1.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">+ Tambah</button>
+            <button onclick="switchView('daftar')"
+              class="p-1.5 rounded text-xs font-medium bg-slate-100 text-slate-700">Daftar</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- ========================================================== -->
+      <!-- CANVAS CONTENT: TAMPILAN BERGANTIAN SESUAI PENPOT          -->
+      <!-- ========================================================== -->
+      <div class="p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+
+        <!-- ======================================================== -->
+        <!-- VIEW 1: BERANDA OPERASIONAL (BOARD: Beranda - ServiceTrack) -->
+        <!-- ======================================================== -->
+        <section id="view-beranda" class="space-y-6">
+
+          <!-- Top Action Bar & Page Title -->
+          <div
+            class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+            <div>
+              <span
+                class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">DASHBOARD
+                LOKET</span>
+              <h2 class="text-2xl font-bold text-slate-900 mt-1">Beranda Operasional</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Ringkasan antrean pengerjaan servis dan akses cepat loket servis.
+              </p>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button type="button" onclick="switchView('daftar')"
+                class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors shadow-xs">
+                Buka Daftar Servis
+              </button>
+              <button type="button" onclick="switchView('tambah')"
+                class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Tambah Servis Baru
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 Metric Cards (Sesuai Board Penpot) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Diterima -->
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-500">Total Masuk Hari Ini</span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800">Diterima</span>
+              </div>
+              <div class="mt-2 flex items-baseline gap-1.5">
+                <span id="metric-diterima-count" class="text-2xl font-bold text-slate-900">0</span>
+                <span class="text-xs text-slate-400">tiket</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Loket penerimaan</p>
+            </div>
+
+            <!-- Card 2: Diperiksa -->
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-500">Menunggu Diperiksa</span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">Diperiksa</span>
+              </div>
+              <div class="mt-2 flex items-baseline gap-1.5">
+                <span id="metric-diperiksa-count" class="text-2xl font-bold text-amber-700">0</span>
+                <span class="text-xs text-slate-400">unit</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Prioritas pengecekan</p>
+            </div>
+
+            <!-- Card 3: Diproses -->
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-500">Sedang Diproses</span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800">Diproses</span>
+              </div>
+              <div class="mt-2 flex items-baseline gap-1.5">
+                <span id="metric-diproses-count" class="text-2xl font-bold text-indigo-700">0</span>
+                <span class="text-xs text-slate-400">unit</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Meja teknisi aktif</p>
+            </div>
+
+            <!-- Card 4: Selesai -->
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-500">Selesai (Siap Ambil)</span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Selesai</span>
+              </div>
+              <div class="mt-2 flex items-baseline gap-1.5">
+                <span id="metric-selesai-count" class="text-2xl font-bold text-emerald-600">0</span>
+                <span class="text-xs text-slate-400">unit</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Menunggu pengambilan</p>
+            </div>
+          </div>
+
+          <!-- Two-Column Main Stage (Left: 65%, Right: 35% Sesuai Penpot) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left Column: Tiket Aktif & Ringkasan Efisiensi -->
+            <div class="lg:col-span-8 space-y-4">
+
+              <!-- Card: Perlu Tindak Lanjut Segera -->
+              <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold text-slate-900">Perlu Tindak Lanjut Segera</h3>
+                    <span id="badge-active-tickets"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700">0 Tiket
+                      Aktif</span>
+                  </div>
+                  <button type="button" onclick="switchView('daftar')"
+                    class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                    Lihat Semua Data Servis &rarr;
+                  </button>
+                </div>
+
+                <!-- Mini Table: Tiket Aktif -->
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                        <th class="py-2 px-2">NO. SERVIS</th>
+                        <th class="py-2 px-2">PELANGGAN & UNIT</th>
+                        <th class="py-2 px-2">KELUHAN DIAGNOSTIK</th>
+                        <th class="py-2 px-2">STATUS</th>
+                        <th class="py-2 px-2 text-center">AKSI CEPAT</th>
+                      </tr>
+                    </thead>
+                    <tbody id="quick-action-tbody" class="divide-y divide-slate-100">
+                      <!-- Diisi dinamis & aman dari JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div id="quick-empty-state" class="hidden text-center py-6 text-xs text-slate-400">
+                  Tidak ada tiket servis yang membutuhkan tindakan segera.
+                </div>
+              </div>
+
+              <!-- Quick Summary Box (Kapasitas Workshop - Sesuai Penpot) -->
+              <div
+                class="bg-slate-900 text-white rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div>
+                  <p class="text-xs font-semibold text-slate-200">Kapasitas Pengerjaan Workshop</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Rata-rata waktu diagnosa hari ini: 1 jam 45 menit per
+                    unit.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span
+                    class="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-1 rounded-full">82%
+                    Efisiensi</span>
+                  <div class="text-right border-l border-slate-700 pl-3">
+                    <p class="text-[10px] text-slate-400">Total Kas Masuk</p>
+                    <p id="beranda-total-kas" class="text-xs font-bold text-indigo-300">Rp0</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Column: Pencarian Cepat & Panduan Alur Status -->
+            <div class="lg:col-span-4 space-y-4">
+
+              <!-- Card 1: Pencarian Cepat Servis (Sesuai Penpot) -->
+              <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-5">
+                <h3 class="text-sm font-bold text-slate-900">Pencarian Cepat Servis</h3>
+                <p class="text-xs text-slate-500 mt-0.5 mb-3">Cari cepat untuk cek status barang pelanggan yang datang
+                  ke loket.</p>
+
+                <div class="space-y-2.5">
+                  <input type="text" id="quick-search-input"
+                    class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Masukkan No. Servis atau Nama...">
+
+                  <!-- Tag Saran Cepat -->
+                  <div class="flex items-center gap-1.5 text-[11px] text-slate-500 flex-wrap">
+                    <span class="text-slate-400">Contoh:</span>
+                    <button type="button" onclick="setQuickSearch('SRV-20261114-0007')"
+                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-indigo-600 font-mono text-[10px]">SRV-0007</button>
+                    <button type="button" onclick="setQuickSearch('Rina')"
+                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-indigo-600 text-[10px]">Rina</button>
+                    <button type="button" onclick="setQuickSearch('Printer')"
+                      class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-indigo-600 text-[10px]">Printer</button>
+                  </div>
+
+                  <button type="button" onclick="executeQuickSearch()"
+                    class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                    Cari Servis
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 2: Panduan Cepat Alur Status (Sesuai Board Penpot) -->
+              <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-5">
+                <h3 class="text-sm font-bold text-slate-900">Panduan Cepat Alur Status</h3>
+                <p class="text-xs text-slate-500 mt-0.5 mb-3">Alur pergantian status penanganan barang servis teknisi
+                  loket:</p>
+
+                <ol class="space-y-2.5 text-xs">
+                  <li class="flex items-start gap-2.5">
+                    <span
+                      class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-800">Diterima</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Loket</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500">Barang masuk dan tiket tercetak.</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-start gap-2.5">
+                    <span
+                      class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-800">Diperiksa</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Teknisi</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500">Diagnosa kerusakan & estimasi biaya.</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-start gap-2.5">
+                    <span
+                      class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-800">Diproses</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Pengerjaan</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500">Perbaikan fisik & sparepart.</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-start gap-2.5">
+                    <span
+                      class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">4</span>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-800">Selesai</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Quality Check</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500">Barang normal & siap dihubungi.</p>
+                    </div>
+                  </li>
+
+                  <li class="flex items-start gap-2.5">
+                    <span
+                      class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">5</span>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-800">Diambil</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Pelunasan</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500">Barang diserahkan & nota selesai.</p>
+                    </div>
+                  </li>
+                </ol>
+
+                <p class="text-[10px] text-slate-400 mt-3 pt-2.5 border-t border-slate-100 leading-normal">
+                  * Perubahan status bersifat maju satu arah untuk menjamin akurasi riwayat audit pengerjaan.
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 2: TAMBAH SERVIS (BOARD: Tambah Servis - ServiceTrack) -->
+        <!-- ======================================================== -->
+        <section id="view-tambah" class="hidden space-y-6">
+
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <div>
+              <span
+                class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">LOKET
+                PENERIMAAN</span>
+              <h2 id="tambah-form-title" class="text-2xl font-bold text-slate-900 mt-1">Tambah Servis Baru</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Pencatatan data pelanggan, unit masuk, keluhan awal, dan
+                penerbitan nomor servis.</p>
+            </div>
+            <button type="button" onclick="switchView('daftar')"
+              class="text-xs font-semibold text-slate-600 hover:text-slate-900">
+              &larr; Kembali ke Daftar
+            </button>
+          </div>
+
+          <!-- Grid: Form di Kiri & Status Validasi di Kanan (Sesuai Board Penpot) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Form Utama (lg:col-span-7) -->
+            <div class="lg:col-span-7 bg-white rounded-xl shadow-xs border border-slate-200 p-6">
+              <h3 class="text-sm font-bold text-slate-900 pb-3 mb-4 border-b border-slate-100">Data Penerimaan Unit</h3>
+
+              <!-- Alert Box Validasi Error -->
+              <div id="alert-error"
+                class="hidden bg-rose-50 border border-rose-300 text-rose-800 rounded-lg p-3.5 mb-4 text-xs flex items-start gap-2.5 animate-pulse"
+                role="alert">
+                <svg class="w-4 h-4 text-rose-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                    clip-rule="evenodd" />
+                </svg>
+                <div class="flex-1">
+                  <p class="font-semibold text-rose-900">Status Validasi Form:</p>
+                  <p id="alert-error-msg" class="mt-0.5 font-medium"></p>
+                </div>
+              </div>
+
+              <!-- Alert Box Sukses -->
+              <div id="alert-success"
+                class="hidden bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-lg p-3.5 mb-4 text-xs flex items-start gap-2.5"
+                role="alert">
+                <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.06l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                    clip-rule="evenodd" />
+                </svg>
+                <div class="flex-1">
+                  <p class="font-semibold text-emerald-900">Operasi Berhasil:</p>
+                  <p id="alert-success-msg" class="mt-0.5 font-medium"></p>
+                </div>
+              </div>
+
+              <form id="service-form" class="space-y-4" novalidate>
+                <input type="hidden" id="service-id" value="">
+
+                <!-- Field 1: Nama Pelanggan * -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1" for="nama_pelanggan">
+                    Nama pelanggan *
+                  </label>
+                  <input type="text" id="nama_pelanggan" name="nama_pelanggan"
+                    class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Contoh: Rina Maharani">
+                </div>
+
+                <!-- Field 2: Nama Barang * -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1" for="nama_barang">
+                    Nama barang *
+                  </label>
+                  <input type="text" id="nama_barang" name="nama_barang"
+                    class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Contoh: Laptop Asus A416 / Printer Epson L3110">
+                </div>
+
+                <!-- Field 3: Keluhan * -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1" for="keluhan">
+                    Keluhan *
+                  </label>
+                  <textarea id="keluhan" name="keluhan" rows="3"
+                    class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Contoh: Layar bergaris dan baterai cepat habis."></textarea>
+                </div>
+
+                <!-- Field 4: Estimasi Biaya & Status Awal -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="estimasi_biaya">
+                      Estimasi Biaya Awal (Rp)
+                    </label>
+                    <input type="number" id="estimasi_biaya" name="estimasi_biaya" step="any"
+                      class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="0">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1" for="status">
+                      Status Tahap
+                    </label>
+                    <select id="status" name="status"
+                      class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                      <option value="Diterima" selected>1. Diterima (Loket)</option>
+                      <option value="Diperiksa">2. Diperiksa (Teknisi)</option>
+                      <option value="Diproses">3. Diproses (Pengerjaan)</option>
+                      <option value="Selesai">4. Selesai (Quality Check)</option>
+                      <option value="Diambil">5. Diambil (Pelunasan)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Helper Text (Sesuai Teks Penpot) -->
+                <p class="text-[11px] text-slate-400 italic">
+                  * Nomor servis terbit otomatis setelah data disimpan.
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="pt-3 flex items-center gap-2.5">
+                  <button type="submit" id="btn-submit"
+                    class="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-colors">
+                    <svg id="btn-spinner" class="hidden animate-spin h-3.5 w-3.5 text-white" fill="none"
+                      viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z">
+                      </path>
+                    </svg>
+                    <span id="btn-submit-text">Simpan & Terbitkan Nomor</span>
+                  </button>
+
+                  <button type="button" onclick="resetForm()"
+                    class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors">
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Right Column: Status Validasi & Preview Servis Baru (lg:col-span-5) -->
+            <div class="lg:col-span-5 space-y-4">
+
+              <!-- Card: Tiket Terakhir Diterbitkan -->
+              <div id="latest-ticket-card" class="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
+                <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Tiket Terkini</span>
+                <p id="latest-ticket-no" class="font-mono text-base font-bold text-indigo-900 mt-1">-</p>
+                <div class="mt-2 text-xs space-y-1 text-slate-600">
+                  <p><span class="text-slate-400">Pelanggan:</span> <strong id="latest-ticket-cust">-</strong></p>
+                  <p><span class="text-slate-400">Unit:</span> <span id="latest-ticket-device">-</span></p>
+                </div>
+                <button type="button" id="btn-view-latest" onclick="viewLatestTicket()"
+                  class="mt-3 w-full py-1.5 bg-white hover:bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-lg text-xs font-semibold transition-colors">
+                  Lihat Detail Servis
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 3: DAFTAR SERVIS (BOARD: Daftar Servis - ServiceTrack) -->
+        <!-- ======================================================== -->
+        <section id="view-daftar" class="hidden space-y-4">
+
+          <!-- Header Bar -->
+          <div
+            class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+            <div>
+              <span
+                class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">DATA
+                TABEL</span>
+              <h2 class="text-2xl font-bold text-slate-900 mt-1">Daftar Servis</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Kelola riwayat penerimaan, tracking proses teknisi, dan
+                pencatatan kas pelunasan.</p>
+            </div>
+            <button type="button" onclick="switchView('tambah')"
+              class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Tambah Servis Baru
+            </button>
+          </div>
+
+          <!-- Filter & Search Bar Row (Sesuai Penpot) -->
+          <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+
+              <!-- Search Box -->
+              <div class="sm:col-span-8 relative">
+                <input type="text" id="search-input"
+                  class="w-full text-xs pl-8 pr-3 py-2 border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Cari No. Servis, Nama Pelanggan, atau Unit Barang...">
+                <span class="absolute left-2.5 top-2.5 text-slate-400">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+              </div>
+
+              <!-- Filter Status -->
+              <div class="sm:col-span-4">
+                <select id="filter-status"
+                  class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="">Semua Status Servis</option>
+                  <option value="Diterima">1. Diterima</option>
+                  <option value="Diperiksa">2. Diperiksa</option>
+                  <option value="Diproses">3. Diproses</option>
+                  <option value="Selesai">4. Selesai</option>
+                  <option value="Diambil">5. Diambil</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Responsive Table Card -->
+          <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr
+                    class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                    <th class="py-3 px-4">No. Servis</th>
+                    <th class="py-3 px-4">Pelanggan</th>
+                    <th class="py-3 px-4">Barang / Unit</th>
+                    <th class="py-3 px-4">Keluhan Kerusakan</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Biaya Akhir</th>
+                    <th class="py-3 px-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="services-tbody" class="divide-y divide-slate-100">
+                  <!-- Baris dirender aman via createSafeTransactionRow() -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="table-empty-state" class="hidden py-12 text-center">
+              <div
+                class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p class="text-xs font-semibold text-slate-700">Tidak ada data servis ditemukan</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Silakan tambah tiket baru atau sesuaikan kata kunci
+                pencarian.</p>
+            </div>
+
+            <!-- Pagination Bar (Sesuai Board Penpot) -->
+            <div
+              class="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <span id="pagination-indicator">Menampilkan 1 - 5 dari 5 data servis</span>
+              <div class="inline-flex items-center gap-1">
+                <button type="button"
+                  class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-600">Sebelumnya</button>
+                <button type="button" class="px-2.5 py-1 rounded bg-indigo-600 text-white font-semibold">1</button>
+                <button type="button"
+                  class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-600">2</button>
+                <button type="button"
+                  class="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-600">Berikutnya</button>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL / DRAWER: DETAIL SERVIS & MULTI-STAGE TRACKER            -->
+  <!-- (BOARD: Detail Servis & Tracking Status - ServiceTrack)        -->
+  <!-- ============================================================== -->
+  <div id="modal-detail"
+    class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div
+      class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-100 flex items-start justify-between">
+        <div>
+          <span
+            class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Detail
+            Servis & Tracking Status</span>
+          <div class="flex items-center gap-2 mt-1">
+            <h3 id="modal-detail-no" class="text-xl font-bold font-mono text-slate-900">-</h3>
+            <span id="modal-detail-badge"
+              class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">Diproses</span>
+          </div>
+          <p id="modal-detail-sub" class="text-xs text-slate-500 mt-0.5">-</p>
+        </div>
+        <button type="button" onclick="closeModalDetail()"
+          class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-6">
+
+        <!-- Multi-Stage Visual Stepper (Diterima -> Diperiksa -> Diproses -> Selesai -> Diambil) -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Riwayat & Alur Status</h4>
+          <div class="grid grid-cols-5 gap-1.5 text-center text-xs">
+            <!-- Step 1 -->
+            <div id="step-diterima"
+              class="p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-600">
+              <span class="block text-[10px] text-slate-400">1. Tahap</span>
+              Diterima
+            </div>
+            <!-- Step 2 -->
+            <div id="step-diperiksa"
+              class="p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-600">
+              <span class="block text-[10px] text-slate-400">2. Tahap</span>
+              Diperiksa
+            </div>
+            <!-- Step 3 -->
+            <div id="step-diproses"
+              class="p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-600">
+              <span class="block text-[10px] text-slate-400">3. Tahap</span>
+              Diproses
+            </div>
+            <!-- Step 4 -->
+            <div id="step-selesai"
+              class="p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-600">
+              <span class="block text-[10px] text-slate-400">4. Tahap</span>
+              Selesai
+            </div>
+            <!-- Step 5 -->
+            <div id="step-diambil"
+              class="p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-600">
+              <span class="block text-[10px] text-slate-400">5. Tahap</span>
+              Diambil
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Servis Details -->
+        <div class="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-slate-400 block text-[10px]">Nama Pelanggan</span>
+            <strong id="modal-detail-cust" class="text-slate-800 text-sm">-</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px]">Nama Barang / Unit</span>
+            <strong id="modal-detail-device" class="text-slate-800 text-sm">-</strong>
+          </div>
+          <div class="col-span-2">
+            <span class="text-slate-400 block text-[10px]">Keluhan Kerusakan</span>
+            <p id="modal-detail-complaint" class="text-slate-700 mt-0.5">-</p>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px]">Estimasi Biaya</span>
+            <p id="modal-detail-est" class="text-slate-700 font-semibold">-</p>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px]">Biaya Akhir / Kas</span>
+            <p id="modal-detail-final" class="text-emerald-700 font-bold">-</p>
+          </div>
+          <div class="col-span-2">
+            <span class="text-slate-400 block text-[10px]">Catatan Teknisi</span>
+            <p id="modal-detail-note" class="text-slate-600 italic mt-0.5">-</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <button type="button" id="modal-btn-advance" onclick="advanceModalStatus()"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+          Perbarui ke Status Berikutnya &rarr;
+        </button>
+        <button type="button" onclick="closeModalDetail()"
+          class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">
+          Tutup
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: CATAT BIAYA AKHIR (BOARD: Catat Biaya Akhir)            -->
+  <!-- ============================================================== -->
+  <div id="modal-biaya"
+    class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+
+      <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div>
+          <span
+            class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Pelunasan
+            & Kas Servis</span>
+          <h3 class="text-lg font-bold text-slate-900 mt-1">Catat Biaya Akhir</h3>
+          <p id="modal-biaya-no" class="text-xs font-mono text-slate-500 mt-0.5">-</p>
+        </div>
+        <button type="button" onclick="closeModalBiaya()"
+          class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+      </div>
+
+      <!-- Alert Box Modal Biaya (Khusus TC-01 Penolakan Negatif) -->
+      <div id="modal-biaya-alert" class="hidden bg-rose-50 border border-rose-300 text-rose-800 rounded-lg p-3 text-xs">
+        <strong id="modal-biaya-alert-msg">Nominal harus lebih dari 0. Biaya akhir harus berupa angka positif.</strong>
+      </div>
+
+      <form id="form-catat-biaya" onsubmit="submitBiayaAkhir(event)" class="space-y-3" novalidate>
+        <input type="hidden" id="biaya-target-id" value="">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1" for="modal-input-biaya">
+            Biaya akhir * <span class="text-slate-400 font-normal">(Rupiah)</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
+            <!-- Tanpa min="1" agar penguji bisa menguji angka negatif -50000 -->
+            <input type="number" id="modal-input-biaya" step="any"
+              class="w-full text-xs border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-semibold"
+              placeholder="150000">
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Biaya akhir harus lebih dari 0 untuk unit yang telah selesai.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1" for="modal-input-note">
+            Catatan teknisi
+          </label>
+          <textarea id="modal-input-note" rows="2"
+            class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder="Penggantian sparepart selesai. Baterai diuji ulang."></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center gap-2">
+          <button type="submit"
+            class="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors">
+            Simpan Biaya Akhir
+          </button>
+          <button type="button" onclick="tandaiDiambil()"
+            class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition-colors">
+            Tandai Diambil
+          </button>
+          <button type="button" onclick="closeModalBiaya()"
+            class="py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">
+            Batal
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- JAVASCRIPT LOGIC & SUPABASE CONTROLLER                         -->
+  <!-- ============================================================== -->
+  <script>
+    /**
+     * ================================================================
+     * SYARAT 2: KONFIGURASI KONEKSI SUPABASE & FALLBACK LOCALSTORAGE
+     * ================================================================
+     */
+    const SUPABASE_URL = 'https://fhefmpwicwfznmjmexrk.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Laij9i4AXO3lkamWpw3lRA_d0SkTmH-';
+
+    let isCloudMode = false;
+    let supabaseClient = null;
+    let servicesCache = [];
+    let currentDetailItem = null;
+
+    /**
+     * Data Dummy Realistis Sesuai Board Penpot (Daftar Servis - ServiceTrack)
+     */
+    const INITIAL_DEMO_DATA = [
+      {
+        id: 1,
+        no_servis: 'SRV-20261114-0003',
+        nama_pelanggan: 'Ahmad Fauzi',
+        nama_barang: 'Monitor Dell 24 Inch',
+        keluhan: 'Layar kedip-kedip setelah 10 menit',
+        status: 'Diterima',
+        estimasi_biaya: 100000,
+        biaya_akhir: 0,
+        catatan_teknisi: 'Barang baru diterima di loket.',
+        created_at: '2026-11-14T08:30:00Z'
+      },
+      {
+        id: 2,
+        no_servis: 'SRV-20261114-0004',
+        nama_pelanggan: 'Hendra Wijaya',
+        nama_barang: 'CPU Desktop PC',
+        keluhan: 'Mati total, power supply bermasalah',
+        status: 'Diperiksa',
+        estimasi_biaya: 350000,
+        biaya_akhir: 0,
+        catatan_teknisi: 'Tegangan PSU drop ke 8V. Perlu penggantian kapasitor.',
+        created_at: '2026-11-14T09:15:00Z'
+      },
+      {
+        id: 3,
+        no_servis: 'SRV-20261114-0007',
+        nama_pelanggan: 'Rina Maharani',
+        nama_barang: 'Laptop Asus A416',
+        keluhan: 'Layar bergaris dan baterai cepat habis.',
+        status: 'Diproses',
+        estimasi_biaya: 500000,
+        biaya_akhir: 0,
+        catatan_teknisi: 'Layar perlu diganti. Baterai diuji ulang.',
+        created_at: '2026-11-14T10:00:00Z'
+      },
+      {
+        id: 4,
+        no_servis: 'SRV-20261114-0006',
+        nama_pelanggan: 'Budi Santoso',
+        nama_barang: 'Printer Epson L3110',
+        keluhan: 'Tinta tidak keluar dan paper jam',
+        status: 'Selesai',
+        estimasi_biaya: 150000,
+        biaya_akhir: 175000,
+        catatan_teknisi: 'Head cleaning tuntas. Roller penarik kertas baru.',
+        created_at: '2026-11-14T11:20:00Z'
+      },
+      {
+        id: 5,
+        no_servis: 'SRV-20261114-0005',
+        nama_pelanggan: 'Siti Rahmawati',
+        nama_barang: 'Smartphone Samsung A52',
+        keluhan: 'Ganti port charger USB-C',
+        status: 'Diambil',
+        estimasi_biaya: 200000,
+        biaya_akhir: 220000,
+        catatan_teknisi: 'Lunas diambil di loket.',
+        created_at: '2026-11-14T13:45:00Z'
+      }
+    ];
+
+    /**
+     * Inisialisasi Database
+     */
+    function initDatabaseConnection() {
+      const demoBanner = document.getElementById('demo-mode-banner');
+
+      if (
+        SUPABASE_URL &&
+        SUPABASE_URL.startsWith('https://') &&
+        SUPABASE_URL.includes('supabase.co') &&
+        SUPABASE_ANON_KEY &&
+        SUPABASE_ANON_KEY !== 'GANTI_DENGAN_SUPABASE_ANON_KEY_ANDA'
+      ) {
+        try {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          isCloudMode = true;
+          if (demoBanner) demoBanner.classList.add('hidden');
+        } catch (err) {
+          setupLocalFallback(demoBanner);
+        }
+      } else {
+        setupLocalFallback(demoBanner);
+      }
+    }
+
+    function setupLocalFallback(banner) {
+      isCloudMode = false;
+      if (banner) banner.classList.remove('hidden');
+
+      if (!localStorage.getItem('servicetrack_data')) {
+        localStorage.setItem('servicetrack_data', JSON.stringify(INITIAL_DEMO_DATA));
+      }
+    }
+
+    /**
+     * Navigasi Multi-View (Beranda, Tambah, Daftar)
+     */
+    function switchView(viewName) {
+      const views = ['beranda', 'tambah', 'daftar'];
+      views.forEach(v => {
+        const el = document.getElementById('view-' + v);
+        const navBtn = document.getElementById('nav-btn-' + v);
+        if (v === viewName) {
+          el.classList.remove('hidden');
+          if (navBtn) {
+            navBtn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-50 text-indigo-700';
+          }
+        } else {
+          el.classList.add('hidden');
+          if (navBtn) {
+            navBtn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors';
+          }
+        }
+      });
+
+      // Update Breadcrumb
+      const bc = document.getElementById('breadcrumb-current');
+      if (viewName === 'beranda') bc.textContent = 'Beranda';
+      if (viewName === 'tambah') bc.textContent = 'Tambah Servis';
+      if (viewName === 'daftar') bc.textContent = 'Daftar Servis';
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * Utilitas Format Mata Uang & ID Servis
+     */
+    function formatRupiah(val) {
+      const num = Number(val) || 0;
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(num);
+    }
+
+    function generateServiceNumber() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      return `SRV-${yyyy}${mm}${dd}-${rand}`;
+    }
+
+    /**
+     * ================================================================
+     * SYARAT 5: IMPLEMENTASI MUTLAK ANTI-XSS (SEC-01)
+     * ================================================================
+     * Penggunaan murni `.textContent` pada elemen `document.createElement()`
+     */
+    function createSafeTransactionRow(item) {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50 transition-colors';
+
+      // 1. No Servis
+      const tdNo = document.createElement('td');
+      tdNo.className = 'py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap';
+      tdNo.textContent = item.no_servis || '-';
+      tr.appendChild(tdNo);
+
+      // 2. Pelanggan
+      const tdCust = document.createElement('td');
+      tdCust.className = 'py-3 px-4 font-medium text-slate-900';
+      tdCust.textContent = item.nama_pelanggan || '-'; // AMAN ANTI-XSS
+      tr.appendChild(tdCust);
+
+      // 3. Barang
+      const tdBarang = document.createElement('td');
+      tdBarang.className = 'py-3 px-4 text-slate-700';
+      tdBarang.textContent = item.nama_barang || '-'; // AMAN ANTI-XSS
+      tr.appendChild(tdBarang);
+
+      // 4. Keluhan
+      const tdKeluhan = document.createElement('td');
+      tdKeluhan.className = 'py-3 px-4 max-w-xs text-slate-500 truncate';
+      tdKeluhan.title = item.keluhan || '';
+      tdKeluhan.textContent = item.keluhan || '-'; // AMAN ANTI-XSS
+      tr.appendChild(tdKeluhan);
+
+      // 5. Status Badge
+      const tdStatus = document.createElement('td');
+      tdStatus.className = 'py-3 px-4 whitespace-nowrap';
+      const badge = document.createElement('span');
+      badge.className = getStatusBadgeClass(item.status);
+      badge.textContent = item.status || 'Diterima';
+      tdStatus.appendChild(badge);
+      tr.appendChild(tdStatus);
+
+      // 6. Biaya Akhir
+      const tdBiaya = document.createElement('td');
+      tdBiaya.className = 'py-3 px-4 text-right whitespace-nowrap font-medium';
+      if (item.biaya_akhir && Number(item.biaya_akhir) > 0) {
+        tdBiaya.className += ' text-emerald-700 font-bold';
+        tdBiaya.textContent = formatRupiah(item.biaya_akhir);
+      } else if (item.estimasi_biaya && Number(item.estimasi_biaya) > 0) {
+        tdBiaya.className += ' text-slate-500';
+        tdBiaya.textContent = formatRupiah(item.estimasi_biaya) + ' (Est.)';
+      } else {
+        tdBiaya.className += ' text-slate-400';
+        tdBiaya.textContent = '-';
+      }
+      tr.appendChild(tdBiaya);
+
+      // 7. Aksi
+      const tdAksi = document.createElement('td');
+      tdAksi.className = 'py-3 px-4 text-center whitespace-nowrap';
+      const divAksi = document.createElement('div');
+      divAksi.className = 'inline-flex items-center gap-1.5';
+
+      // Tombol Detail
+      const btnDetail = document.createElement('button');
+      btnDetail.type = 'button';
+      btnDetail.className = 'px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold';
+      btnDetail.textContent = 'Detail';
+      btnDetail.onclick = () => openModalDetail(item);
+      divAksi.appendChild(btnDetail);
+
+      // Tombol Biaya
+      const btnBiaya = document.createElement('button');
+      btnBiaya.type = 'button';
+      btnBiaya.className = 'px-2 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded text-[11px] font-semibold';
+      btnBiaya.textContent = 'Biaya';
+      btnBiaya.onclick = () => openModalBiaya(item);
+      divAksi.appendChild(btnBiaya);
+
+      // Tombol Hapus
+      const btnHapus = document.createElement('button');
+      btnHapus.type = 'button';
+      btnHapus.className = 'px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-[11px] font-semibold';
+      btnHapus.textContent = 'Hapus';
+      btnHapus.onclick = () => deleteService(item.id, item.no_servis);
+      divAksi.appendChild(btnHapus);
+
+      tdAksi.appendChild(divAksi);
+      tr.appendChild(tdAksi);
+
+      return tr;
+    }
+
+    function getStatusBadgeClass(status) {
+      let base = 'px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide inline-block ';
+      switch (status) {
+        case 'Diterima': return base + 'bg-blue-100 text-blue-800 border border-blue-200';
+        case 'Diperiksa': return base + 'bg-amber-100 text-amber-800 border border-amber-200';
+        case 'Diproses': return base + 'bg-indigo-100 text-indigo-800 border border-indigo-200';
+        case 'Selesai': return base + 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+        case 'Diambil': return base + 'bg-slate-100 text-slate-700 border border-slate-300';
+        default: return base + 'bg-slate-100 text-slate-600';
+      }
+    }
+
+    /**
+     * Render Baris Cepat di Beranda (Aksi Cepat)
+     */
+    function renderQuickActionTable(activeItems) {
+      const tbody = document.getElementById('quick-action-tbody');
+      const emptyState = document.getElementById('quick-empty-state');
+      tbody.innerHTML = '';
+
+      if (!activeItems || activeItems.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      activeItems.slice(0, 4).forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+
+        // No Servis
+        const tdNo = document.createElement('td');
+        tdNo.className = 'py-2.5 px-2 font-mono font-bold text-slate-900 whitespace-nowrap text-[11px]';
+        tdNo.textContent = item.no_servis;
+        tr.appendChild(tdNo);
+
+        // Pelanggan & Unit
+        const tdCust = document.createElement('td');
+        tdCust.className = 'py-2.5 px-2';
+        const dName = document.createElement('div');
+        dName.className = 'font-semibold text-slate-900';
+        dName.textContent = item.nama_pelanggan;
+        const dDev = document.createElement('div');
+        dDev.className = 'text-[10px] text-slate-500';
+        dDev.textContent = item.nama_barang;
+        tdCust.appendChild(dName);
+        tdCust.appendChild(dDev);
+        tr.appendChild(tdCust);
+
+        // Keluhan
+        const tdKel = document.createElement('td');
+        tdKel.className = 'py-2.5 px-2 text-slate-500 max-w-[160px] truncate';
+        tdKel.textContent = item.keluhan;
+        tr.appendChild(tdKel);
+
+        // Status
+        const tdSt = document.createElement('td');
+        tdSt.className = 'py-2.5 px-2 whitespace-nowrap';
+        const sp = document.createElement('span');
+        sp.className = getStatusBadgeClass(item.status);
+        sp.textContent = item.status;
+        tdSt.appendChild(sp);
+        tr.appendChild(tdSt);
+
+        // Aksi Cepat
+        const tdAk = document.createElement('td');
+        tdAk.className = 'py-2.5 px-2 text-center whitespace-nowrap';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-2.5 py-1 text-[11px] font-semibold rounded shadow-xs transition-colors ';
+
+        if (item.status === 'Diterima') {
+          btn.className += 'bg-blue-600 hover:bg-blue-700 text-white';
+          btn.textContent = 'Periksa Unit';
+          btn.onclick = () => updateStatusDirectly(item.id, 'Diperiksa');
+        } else if (item.status === 'Diperiksa') {
+          btn.className += 'bg-amber-600 hover:bg-amber-700 text-white';
+          btn.textContent = 'Mulai Proses';
+          btn.onclick = () => updateStatusDirectly(item.id, 'Diproses');
+        } else if (item.status === 'Diproses') {
+          btn.className += 'bg-indigo-600 hover:bg-indigo-700 text-white';
+          btn.textContent = 'Perbarui ke Selesai';
+          btn.onclick = () => openModalBiaya(item);
+        } else if (item.status === 'Selesai') {
+          btn.className += 'bg-emerald-600 hover:bg-emerald-700 text-white';
+          btn.textContent = 'Catat Biaya Akhir';
+          btn.onclick = () => openModalBiaya(item);
+        } else {
+          btn.className += 'bg-slate-200 text-slate-600';
+          btn.textContent = 'Detail';
+          btn.onclick = () => openModalDetail(item);
+        }
+
+        tdAk.appendChild(btn);
+        tr.appendChild(tdAk);
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * Hitung Metrik & KPI
+     */
+    function updateMetrics() {
+      const countDiterima = servicesCache.filter(i => i.status === 'Diterima').length;
+      const countDiperiksa = servicesCache.filter(i => i.status === 'Diperiksa').length;
+      const countDiproses = servicesCache.filter(i => i.status === 'Diproses').length;
+      const countSelesai = servicesCache.filter(i => i.status === 'Selesai').length;
+      const activeTickets = servicesCache.filter(i => i.status !== 'Diambil');
+
+      document.getElementById('metric-diterima-count').textContent = countDiterima;
+      document.getElementById('metric-diperiksa-count').textContent = countDiperiksa;
+      document.getElementById('metric-diproses-count').textContent = countDiproses;
+      document.getElementById('metric-selesai-count').textContent = countSelesai;
+      document.getElementById('badge-active-tickets').textContent = `${activeTickets.length} Tiket Aktif`;
+
+      const totalKas = servicesCache
+        .filter(i => i.status === 'Selesai' || i.status === 'Diambil')
+        .reduce((sum, i) => sum + (Number(i.biaya_akhir) || 0), 0);
+      document.getElementById('beranda-total-kas').textContent = formatRupiah(totalKas);
+
+      renderQuickActionTable(activeTickets);
+    }
+
+    /**
+     * Muat Data dari Supabase / LocalStorage
+     */
+    async function fetchServices() {
+      try {
+        if (isCloudMode && supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('services')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          servicesCache = data || [];
+        } else {
+          const raw = localStorage.getItem('servicetrack_data');
+          servicesCache = raw ? JSON.parse(raw) : [];
+          servicesCache.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        renderMainTable();
+        updateMetrics();
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    }
+
+    function renderMainTable() {
+      const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
+      const st = document.getElementById('filter-status').value;
+
+      const filtered = servicesCache.filter(i => {
+        const matchSt = !st || i.status === st;
+        const matchQ = !q ||
+          (i.no_servis && i.no_servis.toLowerCase().includes(q)) ||
+          (i.nama_pelanggan && i.nama_pelanggan.toLowerCase().includes(q)) ||
+          (i.nama_barang && i.nama_barang.toLowerCase().includes(q)) ||
+          (i.keluhan && i.keluhan.toLowerCase().includes(q));
+        return matchSt && matchQ;
+      });
+
+      const tbody = document.getElementById('services-tbody');
+      const emptyState = document.getElementById('table-empty-state');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        filtered.forEach(item => {
+          tbody.appendChild(createSafeTransactionRow(item));
+        });
+      }
+
+      document.getElementById('pagination-indicator').textContent =
+        `Menampilkan 1 - ${filtered.length} dari ${servicesCache.length} data servis`;
+    }
+
+    /**
+     * Submit Tambah Servis Baru
+     */
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      hideAlerts();
+
+      const nama_pelanggan = (document.getElementById('nama_pelanggan').value || '').trim();
+      const nama_barang = (document.getElementById('nama_barang').value || '').trim();
+      const keluhan = (document.getElementById('keluhan').value || '').trim();
+      const status = document.getElementById('status').value || 'Diterima';
+      const estimasiVal = document.getElementById('estimasi_biaya').value;
+      const estimasi_biaya = estimasiVal === '' ? 0 : Number(estimasiVal);
+
+      // Validasi Wajib SKPL
+      if (!nama_pelanggan) {
+        showError('Nama pelanggan wajib diisi.');
+        return;
+      }
+      if (!nama_barang) {
+        showError('Nama barang wajib diisi.');
+        return;
+      }
+      if (!keluhan) {
+        showError('Keluhan wajib diisi.');
+        return;
+      }
+      if (isNaN(estimasi_biaya) || estimasi_biaya < 0) {
+        showError('Nominal harus lebih dari 0. Estimasi biaya tidak boleh bernilai negatif.');
+        return;
+      }
+
+      const no_servis = generateServiceNumber();
+      const payload = {
+        no_servis,
+        nama_pelanggan,
+        nama_barang,
+        keluhan,
+        status,
+        estimasi_biaya,
+        biaya_akhir: 0,
+        catatan_teknisi: '',
+        created_at: new Date().toISOString()
+      };
+
+      try {
+        if (isCloudMode && supabaseClient) {
+          const { error } = await supabaseClient.from('services').insert([payload]);
+          if (error) throw error;
+        } else {
+          payload.id = Date.now();
+          servicesCache.unshift(payload);
+          localStorage.setItem('servicetrack_data', JSON.stringify(servicesCache));
+        }
+
+        // Update Latest Ticket Card
+        document.getElementById('latest-ticket-no').textContent = no_servis;
+        document.getElementById('latest-ticket-cust').textContent = nama_pelanggan;
+        document.getElementById('latest-ticket-device').textContent = nama_barang;
+        currentDetailItem = payload;
+
+        showSuccess(`Servis berhasil dicatat. Nomor servis: ${no_servis}`);
+        resetForm();
+        await fetchServices();
+      } catch (err) {
+        showError('Gagal menyimpan: ' + (err.message || err));
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('service-form').reset();
+    }
+
+    function showError(msg) {
+      const a = document.getElementById('alert-error');
+      document.getElementById('alert-error-msg').textContent = msg;
+      a.classList.remove('hidden');
+      document.getElementById('alert-success').classList.add('hidden');
+    }
+
+    function showSuccess(msg) {
+      const a = document.getElementById('alert-success');
+      document.getElementById('alert-success-msg').textContent = msg;
+      a.classList.remove('hidden');
+      document.getElementById('alert-error').classList.add('hidden');
+    }
+
+    function hideAlerts() {
+      document.getElementById('alert-error').classList.add('hidden');
+      document.getElementById('alert-success').classList.add('hidden');
+    }
+
+    /**
+     * Modal Detail Servis & Multi-Stage Tracker
+     */
+    function openModalDetail(item) {
+      currentDetailItem = item;
+      document.getElementById('modal-detail-no').textContent = item.no_servis;
+      document.getElementById('modal-detail-badge').className = getStatusBadgeClass(item.status);
+      document.getElementById('modal-detail-badge').textContent = item.status;
+      document.getElementById('modal-detail-sub').textContent = `${item.nama_barang} · ${item.nama_pelanggan}`;
+
+      document.getElementById('modal-detail-cust').textContent = item.nama_pelanggan;
+      document.getElementById('modal-detail-device').textContent = item.nama_barang;
+      document.getElementById('modal-detail-complaint').textContent = item.keluhan;
+      document.getElementById('modal-detail-est').textContent = formatRupiah(item.estimasi_biaya);
+      document.getElementById('modal-detail-final').textContent = item.biaya_akhir ? formatRupiah(item.biaya_akhir) : 'Rp0';
+      document.getElementById('modal-detail-note').textContent = item.catatan_teknisi || '(Belum ada catatan)';
+
+      // Highlight Stepper
+      const steps = ['Diterima', 'Diperiksa', 'Diproses', 'Selesai', 'Diambil'];
+      steps.forEach(st => {
+        const el = document.getElementById('step-' + st.toLowerCase());
+        if (el) {
+          if (st === item.status) {
+            el.className = 'p-2 rounded-lg border-2 text-[11px] font-bold bg-indigo-50 border-indigo-600 text-indigo-700 shadow-xs';
+          } else {
+            el.className = 'p-2 rounded-lg border text-[11px] font-semibold bg-slate-100 border-slate-200 text-slate-500';
+          }
+        }
+      });
+
+      const btnAdv = document.getElementById('modal-btn-advance');
+      if (item.status === 'Diambil') {
+        btnAdv.classList.add('hidden');
+      } else {
+        btnAdv.classList.remove('hidden');
+        btnAdv.textContent = `Perbarui ke Tahap Berikutnya &rarr;`;
+      }
+
+      document.getElementById('modal-detail').classList.remove('hidden');
+    }
+
+    function closeModalDetail() {
+      document.getElementById('modal-detail').classList.add('hidden');
+    }
+
+    async function advanceModalStatus() {
+      if (!currentDetailItem) return;
+      const order = ['Diterima', 'Diperiksa', 'Diproses', 'Selesai', 'Diambil'];
+      const curIdx = order.indexOf(currentDetailItem.status);
+      if (curIdx < order.length - 1) {
+        const nextStatus = order[curIdx + 1];
+        if (nextStatus === 'Selesai') {
+          closeModalDetail();
+          openModalBiaya(currentDetailItem);
+        } else {
+          if (confirm(`Ubah status ke ${nextStatus}? Status yang sudah diubah tidak dapat dikembalikan ke tahap sebelumnya.`)) {
+            await updateStatusDirectly(currentDetailItem.id, nextStatus);
+            closeModalDetail();
+          }
+        }
+      }
+    }
+
+    /**
+     * Modal Catat Biaya Akhir & Validasi Ketat TC-01 / TC-02
+     */
+    function openModalBiaya(item) {
+      currentDetailItem = item;
+      document.getElementById('biaya-target-id').value = item.id;
+      document.getElementById('modal-biaya-no').textContent = `${item.no_servis} — ${item.nama_pelanggan} (${item.nama_barang})`;
+      document.getElementById('modal-input-biaya').value = item.biaya_akhir || '';
+      document.getElementById('modal-input-note').value = item.catatan_teknisi || '';
+      document.getElementById('modal-biaya-alert').classList.add('hidden');
+      document.getElementById('modal-biaya').classList.remove('hidden');
+    }
+
+    function closeModalBiaya() {
+      document.getElementById('modal-biaya').classList.add('hidden');
+    }
+
+    async function submitBiayaAkhir(e) {
+      e.preventDefault();
+      const biayaVal = document.getElementById('modal-input-biaya').value;
+      const note = document.getElementById('modal-input-note').value;
+      const nominal = Number(biayaVal);
+
+      // ==============================================================
+      // SYARAT 4: VALIDASI BLACK BOX (TC-01 & TC-02)
+      // ==============================================================
+      if (biayaVal === '' || isNaN(nominal) || nominal <= 0) {
+        const alertBox = document.getElementById('modal-biaya-alert');
+        alertBox.textContent = 'Nominal harus lebih dari 0. Biaya akhir harus berupa angka positif.';
+        alertBox.classList.remove('hidden');
+        return;
+      }
+
+      await updateBiayaAndStatus(currentDetailItem.id, nominal, note, 'Selesai');
+      closeModalBiaya();
+    }
+
+    async function tandaiDiambil() {
+      const biayaVal = document.getElementById('modal-input-biaya').value;
+      const note = document.getElementById('modal-input-note').value;
+      const nominal = Number(biayaVal);
+
+      if (biayaVal === '' || isNaN(nominal) || nominal <= 0) {
+        const alertBox = document.getElementById('modal-biaya-alert');
+        alertBox.textContent = 'Nominal harus lebih dari 0. Biaya akhir harus berupa angka positif.';
+        alertBox.classList.remove('hidden');
+        return;
+      }
+
+      await updateBiayaAndStatus(currentDetailItem.id, nominal, note, 'Diambil');
+      closeModalBiaya();
+    }
+
+    async function updateBiayaAndStatus(id, biaya, catatan, status) {
+      try {
+        if (isCloudMode && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('services')
+            .update({ biaya_akhir: biaya, catatan_teknisi: catatan, status: status })
+            .eq('id', id);
+          if (error) throw error;
+        } else {
+          const idx = servicesCache.findIndex(i => String(i.id) === String(id));
+          if (idx !== -1) {
+            servicesCache[idx].biaya_akhir = biaya;
+            servicesCache[idx].catatan_teknisi = catatan;
+            servicesCache[idx].status = status;
+            localStorage.setItem('servicetrack_data', JSON.stringify(servicesCache));
+          }
+        }
+        await fetchServices();
+      } catch (err) {
+        alert('Gagal memperbarui biaya: ' + err.message);
+      }
+    }
+
+    async function updateStatusDirectly(id, newStatus) {
+      try {
+        if (isCloudMode && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('services')
+            .update({ status: newStatus })
+            .eq('id', id);
+          if (error) throw error;
+        } else {
+          const idx = servicesCache.findIndex(i => String(i.id) === String(id));
+          if (idx !== -1) {
+            servicesCache[idx].status = newStatus;
+            localStorage.setItem('servicetrack_data', JSON.stringify(servicesCache));
+          }
+        }
+        await fetchServices();
+      } catch (err) {
+        alert('Gagal update status: ' + err.message);
+      }
+    }
+
+    async function deleteService(id, no) {
+      if (!confirm(`Hapus tiket servis [${no}] secara permanen?`)) return;
+      try {
+        if (isCloudMode && supabaseClient) {
+          const { error } = await supabaseClient.from('services').delete().eq('id', id);
+          if (error) throw error;
+        } else {
+          servicesCache = servicesCache.filter(i => String(i.id) !== String(id));
+          localStorage.setItem('servicetrack_data', JSON.stringify(servicesCache));
+        }
+        await fetchServices();
+      } catch (err) {
+        alert('Gagal menghapus: ' + err.message);
+      }
+    }
+
+    function viewLatestTicket() {
+      if (currentDetailItem) {
+        openModalDetail(currentDetailItem);
+      }
+    }
+
+    /**
+     * Pencarian Cepat di Beranda
+     */
+    function setQuickSearch(val) {
+      document.getElementById('quick-search-input').value = val;
+      executeQuickSearch();
+    }
+
+    function executeQuickSearch() {
+      const q = document.getElementById('quick-search-input').value;
+      document.getElementById('search-input').value = q;
+      switchView('daftar');
+      renderMainTable();
+    }
+
+    // Inisialisasi Aplikasi
+    document.addEventListener('DOMContentLoaded', function () {
+      initDatabaseConnection();
+      document.getElementById('service-form').addEventListener('submit', handleFormSubmit);
+      document.getElementById('search-input').addEventListener('input', renderMainTable);
+      document.getElementById('filter-status').addEventListener('change', renderMainTable);
+      fetchServices();
+    });
+  </script>
+</body>
+
+</html>
